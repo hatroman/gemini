@@ -51,13 +51,16 @@ describe('browser', function() {
                     retryDelay: 25
                 }
             };
+
             this.sinon.stub(wd, 'promiseRemote').returns(this.wd);
             this.browser = new Browser(this.config, 'browser', {
                 browserName: 'browser',
-                version: '1.0',
-                // disable calibration for tests to avoid a lot of mocking
-                '--noCalibrate': true
+                version: '1.0'
             });
+
+            // don't do calibration in this tests, its too difficult
+            // to mock
+            this.sinon.stub(this.browser, 'calibrate').returns(q());
         });
 
         it('should init browser with browserName, version and takeScreenshot capabilites', function() {
@@ -66,8 +69,7 @@ describe('browser', function() {
                 sinon.assert.calledWith(_this.wd.init, {
                     browserName: 'browser',
                     version: '1.0',
-                    takesScreenshot: true,
-                    '--noCalibrate': true
+                    takesScreenshot: true
                 });
             });
         });
@@ -95,7 +97,6 @@ describe('browser', function() {
                     browserName: 'browser',
                     version: '1.0',
                     takesScreenshot: true,
-                    '--noCalibrate': true,
                     option1: 'value1',
                     option2: 'value2'
                 });
@@ -113,14 +114,6 @@ describe('browser', function() {
 
             return this.browser.launch().then(function() {
                 sinon.assert.calledWith(_this.browser.calibrate);
-            });
-        });
-
-        it('should not call calibrate() when --noCalibrate is true', function() {
-            var _this = this;
-            this.sinon.stub(this.browser, 'calibrate').returns(q({}));
-            return this.browser.launch().then(function() {
-                sinon.assert.notCalled(_this.browser.calibrate);
             });
         });
     });
@@ -219,8 +212,10 @@ describe('browser', function() {
                 execute: sinon.stub().returns(q({})),
                 get: sinon.stub().returns(q({})),
                 elementByCssSelector: sinon.stub().returns(q()),
-                moveTo: sinon.stub().returns(q()),
-                takeScreenshot: sinon.stub().returns(q(imgData))
+                takeScreenshot: sinon.stub().returns(q(imgData)),
+                eval: sinon.stub().returns(q({
+                    bodyHeight: 1000
+                }))
             };
 
             this.sinon.stub(wd, 'promiseRemote').returns(this.wd);
@@ -231,7 +226,28 @@ describe('browser', function() {
         it('should calculate correct crop area', function() {
             return this.browser.calibrate()
                 .then(function(rs) {
-                    rs.must.eql({top: 24, left: 6, right: 2, bottom: 0});
+                    rs.top.must.be(24);
+                    rs.left.must.be(6);
+                    rs.right.must.be(2);
+                    rs.bottom.must.be(0);
+                });
+        });
+
+        it('should determine when browser captures only viewport', function() {
+            return this.browser.calibrate()
+                .then(function(rs) {
+                    rs.capturesEntirePage.must.be.false();
+                });
+        });
+
+        it('should determine when browser captures body', function() {
+            /*jshint evil:true*/
+            this.wd.eval.returns({
+                bodyHeight: 100
+            });
+            return this.browser.calibrate()
+                .then(function(rs) {
+                    rs.capturesEntirePage.must.be.true();
                 });
         });
 

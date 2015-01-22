@@ -61,26 +61,13 @@ describe('capture session', function() {
     });
 
     describe('capture', function() {
-        function setupImageLessThenBody(ctx) {
-            return setupImage(ctx, 90);
-        }
-
-        function setupImageGreaterThenBody(ctx) {
-            return setupImage(ctx, 150);
-        }
-
-        function setupImage(ctx, height) {
+        function setupImage(ctx) {
             ctx.browser.prepareScreenshot.returns({
-                bodyHeight: 100,
                 captureArea: {
                     top: 80,
                     left: 30,
                     width: 20,
                     height: 30
-                },
-                viewportOffset: {
-                    top: 70,
-                    left: 10
                 },
                 ignoreAreas: [
                     {top: 90, left: 40, width: 5, height: 8}
@@ -90,7 +77,7 @@ describe('capture session', function() {
             var image = {
                 getSize: sinon.stub().returns({
                     width: 100,
-                    height: height
+                    height: 200
                 }),
 
                 crop: sinon.stub().returns(q()),
@@ -147,32 +134,8 @@ describe('capture session', function() {
             });
         });
 
-        it('should crop screenshoot basing on viewport if image is less then body', function() {
-            var image = setupImageLessThenBody(this);
-            return this.session.capture(this.state).then(function() {
-                sinon.assert.calledWith(image.crop, {
-                    top: 10,
-                    left: 20,
-                    width: 20,
-                    height: 30
-                });
-            });
-        });
-
-        it('should clear ignored areas basing on viewport if image is less then body', function() {
-            var image = setupImageLessThenBody(this);
-            return this.session.capture(this.state).then(function() {
-                sinon.assert.calledWith(image.clear, {
-                    top: 20,
-                    left: 30,
-                    width: 5,
-                    height: 8
-                });
-            });
-        });
-
-        it('should crop screenshoot basing on body if image is greater then body', function() {
-            var image = setupImageGreaterThenBody(this);
+        it('should crop screenshoot according to capture area', function() {
+            var image = setupImage(this);
 
             return this.session.capture(this.state).then(function() {
                 sinon.assert.calledWith(image.crop, {
@@ -184,8 +147,8 @@ describe('capture session', function() {
             });
         });
 
-        it('should clear ignored areas basing on body if image is greater then body', function() {
-            var image = setupImageGreaterThenBody(this);
+        it('should clear ignored areas', function() {
+            var image = setupImage(this);
 
             return this.session.capture(this.state).then(function() {
                 sinon.assert.calledWith(image.clear, {
@@ -203,11 +166,6 @@ describe('capture session', function() {
             this.browser.id = 'bro';
 
             this.browser.prepareScreenshot.returns({
-                bodyHeight: 100,
-                viewportOffset: {
-                    top: 50,
-                    left: 0
-                },
                 captureArea: {
                     top: 50,
                     left: 0,
